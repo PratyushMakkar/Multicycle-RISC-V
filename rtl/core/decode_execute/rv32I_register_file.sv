@@ -20,10 +20,10 @@ logic [7:0] bram_write_addr;
 logic [15:0] bram_write_data;
 
 logic file_reg_data;
-wire [7:0] bram_read_addr = (!bram_state_rd_control) ? {3'b0, i_reg_addr} : {2'b0, i_reg_addr[4:0], 1'b0};
+wire [7:0] bram_read_addr = (!bram_state_rd_control) ? {3'b000, i_reg_addr} : {3'b001, i_reg_addr[4:0]};
 wire [15:0] bram_read_data;
 
-assign bram_write_addr = (!bram_state_wr_control) ? {3'b00, i_dest_addr[4:0]} : {2'b00, i_dest_addr[4:0], 1'b0};
+assign bram_write_addr = (!bram_state_wr_control) ? {3'b00, i_dest_addr[4:0]} : {3'b001, i_dest_addr[4:0]};
 assign bram_write_data = (!bram_state_wr_control) ? i_dest_reg_data[15:0] : i_dest_reg_data[31:16];
 
 ICE40_BRAM BRAM (
