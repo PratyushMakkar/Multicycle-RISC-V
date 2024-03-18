@@ -2,9 +2,10 @@
 TOPLEVEL_LANG = verilog
 
 SIM ?= icarus
-WAVES ?= 0
+WAVES ?= 1
 RTL_DIR =  $(shell pwd)/../rtl
 TB_DIR = $(shell pwd)/../tb
+MODULE ?= main
 
 DECODE_EXECUTE_RTL_SRCS := 
 DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32_adder_unit.sv
@@ -12,21 +13,25 @@ DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32I_alu_execute_fsm.
 DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32I_register_file.sv
 DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32I_decode_stage.sv
 
+SV_TB_DIR :=
+SV_TB_DIR +=$(RTL_DIR)/tb_wrappers/alu_execute_fsm_wrapper.sv
+
 VERILOG_SOURCES :=
-VERILOG_SOURCES += $(DECODE_EXECUTE_RTL_SRCS)
-VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_sim_build_params.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_utils.sv
+VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_sim_build_params.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_instruction_fetch_stage.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_writeback_stage.sv
 VERILOG_SOURCES += $(RTL_DIR)/riscv_core.sv
-
-SV_TB_DIR :=
+VERILOG_SOURCES += $(DECODE_EXECUTE_RTL_SRCS)
+VERILOG_SOURCES += $(SV_TB_DIR)
 
 PYTHON_DIR := $(TB_DIR)
 PYTHON_DIR += $(TB_DIR)/lib
 PYTHON_DIR += $(TB_DIR)/RV32Components
+PYTHON_DIR += $(TB_DIR)/sequences
+PYTHON_DIR += $(TB_DIR)/tests
 
-MODULE = main
+MODULE = $(MODULE)
 TOPLEVEL =  $(TOP) 
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

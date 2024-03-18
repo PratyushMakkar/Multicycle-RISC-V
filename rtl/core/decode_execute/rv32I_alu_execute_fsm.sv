@@ -1,6 +1,7 @@
 module rv32_alu_fsm (
   input logic i_clk,
   input logic i_rst,
+  input logic i_en_alu,
   input logic [31:0] i_operand_one,
   input logic [31:0] i_operand_two,
   input logic i_stall_reset,
@@ -25,7 +26,7 @@ logic [2:0] alu_op_state;
 logic alu_result_ready;
 
 // Gate level implementation of Adders/AND/XOR/OR
-RV32I_ALU GL_ALU_INST (
+rv32_adder_unit GL_ALU_INST (
   .i_operand_one(alu_operand_one),
   .i_operand_two(alu_operand_two),
   .i_c_in(alu_carry_in),
@@ -34,42 +35,37 @@ RV32I_ALU GL_ALU_INST (
   .o_result(alu_result)
 );
 
-logic temp_upper;
+
 logic temp_en;
 logic carry_out_q;
 logic carry_out_en;
-logic [31:0] temp_register_q;
+logic [15:0] temp_register_q;
 logic [15:0] temp_register_d;
 
+logic hold_q, hold_en;
 assign temp_register_d = alu_result;
-always_ff @(posedge i_clk) begin
-  else if (temp_upper & temp_en) temp_register_q[31:15] <= temp_register_d;
-  else if (!temp_upper & temp_en) temp_register_q[15:0] <= temp_register_d;
-  carry_out_q <= alu_carry_out;
-end
 
 /**
  Hold result logic.
  Freezes state machine until i_stall_result is held low again. 
 **/
-logic hold_q, logic hold_en;
 always_ff @(posedge i_clk) begin
-  if (i_stall_reset) hold_q <= 1'b0;
+  if (temp_en) temp_register_q <= temp_register_d;
+  carry_out_q <= alu_carry_out;
+
   if (hold_en) hold_q <= i_stall_reset;
+  else hold_q <= 1'b0;
 end
 
 always_comb begin
-  alu_result_read = 1'b0;
   alu_carry_in = 1'b0;
   alu_result_ready = 1'b0;
   temp_en = 1'b0;
-  temp_clear = 1'b0;
-  temp_upper = 1'b0;
 
   carry_out_en = 1'b0;
   hold_en = 1'b0;
-
-  if (add_op & !hold_q) begin
+  
+  if (add_op) begin
     carry_out_en = 1'b1;
     temp_en = 1'b1;
     alu_op_sel = 2'b00;
@@ -77,23 +73,22 @@ always_comb begin
       alu_operand_one = i_operand_one[15:0];
       alu_operand_two = i_operand_two[15:0];
     end else begin
+      temp_en = 1'b0;
       alu_operand_one =  i_operand_one[31:16];
       alu_operand_two = i_operand_two[31:16];
       alu_carry_in = carry_out_q;
-      temp_upper = 1'b1;
       alu_result_ready = 1'b1;
       hold_en = 1'b1;
     end
   end
 
-  if (and_op & !hold_q) begin
+  if (and_op) begin
     temp_en = 1'b1;
     alu_op_sel = 2'b10;
     if (!alu_op_state[0]) begin
       alu_operand_one = i_operand_one[15:0];
       alu_operand_two = i_operand_two[15:0];
     end else begin
-      temp_upper = 1'b1;
       alu_operand_one =  i_operand_one[31:16];
       alu_operand_two = i_operand_two[31:16];
       alu_result_ready = 1'b1;
@@ -101,14 +96,13 @@ always_comb begin
     end
   end
 
-  if (or_op & !hold_q) begin
+  if (or_op) begin
     temp_en = 1'b1;
     alu_op_sel = 2'b01;
     if (!alu_op_state[0]) begin
       alu_operand_one = i_operand_one[15:0];
       alu_operand_two = i_operand_two[15:0];
     end else begin
-      temp_upper = 1'b1;
       alu_operand_one =  i_operand_one[31:16];
       alu_operand_two = i_operand_two[31:16];
       alu_result_ready = 1'b1;
@@ -116,14 +110,13 @@ always_comb begin
     end
   end
 
-  if (xor_op & !hold_q) begin
+  if (xor_op) begin
     temp_en = 1'b1;
     alu_op_sel = 2'b11;
     if (!alu_op_state[0]) begin
       alu_operand_one = i_operand_one[15:0];
       alu_operand_two = i_operand_two[15:0];
     end else begin
-      temp_upper = 1'b1;
       alu_operand_one =  i_operand_one[31:16];
       alu_operand_two = i_operand_two[31:16];
       alu_result_ready = 1'b1;
@@ -133,9 +126,13 @@ always_comb begin
 end
 
 always_ff @(posedge i_clk) begin
-  if (i_rst) alu_op_state <= 3'b000;
-  else alu_op_state <= alu_op_state + 1'b1;
+  if (i_rst) begin 
+    alu_op_state <= 3'b000;
+  end else begin 
+    o_data_valid <= alu_result_ready;
+    if (i_en_alu & !hold_q) alu_op_state <= alu_op_state + 1'b1;
+  end
 end
 
-assign o_data_valid = alu_result_ready;
+assign o_result = {alu_result, temp_register_q};
 endmodule

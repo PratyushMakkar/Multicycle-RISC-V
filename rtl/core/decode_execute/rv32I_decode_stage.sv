@@ -1,5 +1,3 @@
-import RV32I_core_utils_package::*;
-
 module RV32I_decode_stage #(
   parameter WORD_SIZE = 32, 
   parameter INSTRUCTION_WIDTH = 32) 
@@ -134,7 +132,7 @@ RV32I_register_file REGFILE_INST (     // Instantiated register file
 
   .i_wr_en(i_file_wr_en),
   .i_dest_addr(i_rf_wr_data),
-  .i_dest_reg_data(i_rf_wr_data)
+  .i_dest_reg_data(i_rf_wr_data),
 
   .o_rd_valid(rd_ready),
   .o_wr_valid(wr_ready)
