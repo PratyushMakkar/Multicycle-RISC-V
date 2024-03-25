@@ -6,7 +6,7 @@ module alu_execute_fsm_wrapper (
   // Expected signals
   input logic [31:0] alu_result_exp,
   input logic carry_out_exp,
-  output logic o_result, 
+  output logic  [31:0] o_result, 
 
   // Sync signals
   input logic sim_finished_trigger,
@@ -24,6 +24,21 @@ module alu_execute_fsm_wrapper (
   logic [1:0] alu_sel;
   logic carry_out, data_valid;
 
+    // The synchronizing signal 
+  task synchronizeDut();
+    tx_finished <= 1'b1; 
+    @(posedge tx_ack_data); 
+    tx_finished <= 1'b0; 
+  endtask 
+
+  // Generate clock for the design 
+  assign o_clk = clk; 
+  task toggleClock; 
+   forever begin  
+    #5 clk = ~clk; 
+   end 
+  endtask 
+
   localparam MAX_ATTEMPS = 5;
   rv32_alu_fsm alu_fsm (
     .i_clk(clk),
@@ -31,7 +46,6 @@ module alu_execute_fsm_wrapper (
     .i_en_alu(en_alu),
     .i_operand_one(operand_one),
     .i_operand_two(operand_two),
-    .i_stall_reset(stall_reset),
     .i_alu_sel(alu_sel),
     .o_carry_out(carry_out),
     .o_data_valid(data_valid),
@@ -43,7 +57,6 @@ module alu_execute_fsm_wrapper (
     rst <= 1'b0;
     operand_one <= 'd0;
     operand_two <= 'd0;
-    stall_reset <= 'd0;
     alu_sel <= 'd0;
     tb_error <= 1'b0;
     tx_finished <= 1'b0;
@@ -61,20 +74,7 @@ module alu_execute_fsm_wrapper (
         @(posedge sim_finished_trigger);
       end
     join_any
-    //disable fork;
   end
-
-  task toggleClock;
-   forever begin 
-    #5 clk = ~clk;
-   end
-  endtask
-
-  task synchronizeDut();
-    tx_finished <= 1'b1;
-    @(posedge tx_ack_data);
-    tx_finished <= 1'b0;
-  endtask
 
   task resetDut();
     rst <= 1'b1;
@@ -82,8 +82,11 @@ module alu_execute_fsm_wrapper (
     @(posedge clk);
     rst <= 1'b0;
   endtask
-
+  logic debug_signal; 
   task driveStimulus();
+    logic [31:0] alu_result_ff;
+    logic carry_out_result_ff;
+
     resetDut();
     forever begin
       @(posedge clk);
@@ -91,23 +94,24 @@ module alu_execute_fsm_wrapper (
       operand_one <= i_operand_one;
       operand_two <= i_operand_two;
       alu_sel <= alu_op_sel;
-      stall_reset <= 1'b1;
       fork 
         begin
           @(posedge data_valid);
+          @(posedge clk);
+          alu_result_ff = alu_result;
+          carry_out_result_ff = carry_out_exp;
         end
         begin
           repeat (MAX_ATTEMPS) @(posedge clk);
         end
       join_any
-      //if (!data_valid) tb_error <= 1'b1;
-      //if (alu_result_exp != alu_result) tb_error <= 1'b1;
-      //if (carry_out != carry_out_exp) tb_error <= 1'b1;
+      if (!data_valid) tb_error <= 1'b1;
+      if (alu_result_exp != alu_result_ff) tb_error <= 1'b1;
+      if (carry_out != carry_out_exp) tb_error <= 1'b1;
       o_result <= alu_result;
       synchronizeDut();
       resetDut();
     end
   endtask
 
-  assign o_clk = clk;
 endmodule
