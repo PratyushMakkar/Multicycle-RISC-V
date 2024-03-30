@@ -13,8 +13,8 @@ DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32I_alu_execute_fsm.
 DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32I_register_file.sv
 DECODE_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/decode_execute/rv32I_decode_stage.sv
 
-SV_TB_DIR :=
-SV_TB_DIR +=$(RTL_DIR)/tb_wrappers/alu_execute_fsm_wrapper.sv
+SV_TB_DIR :=  $(RTL_DIR)/tb_wrappers/rv32_tb_package.sv
+SV_TB_DIR += $(RTL_DIR)/tb_wrappers/alu_execute_fsm_wrapper.sv
 
 VERILOG_SOURCES :=
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_utils.sv
@@ -31,7 +31,6 @@ PYTHON_DIR += $(TB_DIR)/RV32Components
 PYTHON_DIR += $(TB_DIR)/sequences
 PYTHON_DIR += $(TB_DIR)/tests
 
-MODULE = $(MODULE)
 TOPLEVEL =  $(TOP) 
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
