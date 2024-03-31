@@ -1,5 +1,11 @@
 package rv32_tb_package;
 
+task initializeClock(ref clk);
+  forever begin
+    #5 clk = ~clk;
+  end
+endtask
+
 `define SYNCHRONIZE_DUT(TX_ACK); \
   task synchronizeDut(); \
     TX_ACK <= 1'b1; \

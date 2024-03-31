@@ -1,7 +1,5 @@
-
 module RV32I_instruction_fetch_stage #(
-  parameter REST_MEM_PTR = 'd0, 
-  parameter MEM_SIZE = 1024) 
+  parameter REST_MEM_PTR = 32'd0) 
 (
   input logic i_clk,
   input logic i_rst,
@@ -23,7 +21,6 @@ module RV32I_instruction_fetch_stage #(
 // -------- Top level instruction fetch signals ------- //
 logic instruction_latch_en;
 
-
 // --------------------- Instrcuction memory interface ------- //
 logic instruction_mem_rd_en, instruction_mem_rd_valid;
 logic [31:0] instruction_mem_rd_addr, instruction_mem_rd_data;
@@ -32,7 +29,7 @@ logic instruction_mem_rst;
 logic instruction_mem_wr_en, instruction_mem_wr_valid;
 logic [31:0] instruction_mem_wr_addr, instruction_mem_wr_data;
 
-RV32I_instruction_mem INSTRUCTION_MEM (
+RV32I_instruction_mem INSTRUCTION_CACHE (
   .i_clk(i_clk),
   .i_rst(instruction_mem_rst),
   .i_wr_en(instruction_mem_wr_en),
@@ -51,7 +48,7 @@ always_comb begin : INSTRUCTION_MEM_INTERFACE
   instruction_mem_wr_data = i_instruction_wr_data;
   o_instruction_wr_valid = instruction_mem_wr_valid;
 
-  
+
   instruction_mem_rd_addr = pc_addr_reg;
   instruction_mem_rst = 1'b0;
   instruction_latch_en = 1'b0;
