@@ -57,13 +57,11 @@ endtask
 
 task loadInstruction();
   bit [8:0] instruction_count;
-  
   instruction_count = i_cycle_length;
-  @(posedge debug_clk);
   debug_instruction_wr_en <= 1'b1;
   for (integer instruction_mem = 0; instruction_mem <= instruction_count; ++instruction_mem) begin
-    debug_instruction_wr_data <= instruction_mem;
-    debug_instruction_wr_addr <= instruction_mem;
+    debug_instruction_wr_data <= 4*instruction_mem;
+    debug_instruction_wr_addr <= 4*instruction_mem;
 
     @(posedge o_debug_instruction_wr_valid);
     @(posedge debug_clk);
@@ -84,9 +82,11 @@ task begin_test();
     if (i_operation_code == OPERATION_CODE_LOAD_INSTRUCTION) loadInstruction();
     else if (i_operation_code == OPERATION_CODE_INSTRUCTION_FETCH) begin
       instruction_count = i_cycle_length;
+      debug_decode_ready <= 1'b1;
       repeat (instruction_count) begin 
         @(posedge debug_clk);
       end
+      debug_decode_ready <= 1'b0;
     end
     else if (i_operation_code == OPERATION_CODE_RESET_SIM) resetDut();
     else if (i_operation_code == OPERATION_CODE_END_SIM) disable fork;
@@ -94,6 +94,7 @@ task begin_test();
     o_tx_complete = 1'b1;
     @(posedge i_rx_continue);
     o_tx_complete = 1'b0;
+    @(negedge i_rx_continue);
   end
 endtask
 

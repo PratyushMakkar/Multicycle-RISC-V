@@ -61,11 +61,14 @@ end
 
 logic [31:0] pc_addr_reg;
 always_ff @(posedge i_clk) begin : INSTRUCTION_FETCH_FSM
-  pc_addr_reg <= REST_MEM_PTR;
-
-  if (instruction_latch_en) begin
+  if (i_rst) begin 
+    pc_addr_reg <= REST_MEM_PTR;
+    o_fetch_instruction <= NOOP_INSTRUCTION;
+  end 
+  
+  else if (instruction_latch_en) begin
     o_fetch_instruction_pc <= pc_addr_reg;
-    if (i_rst || i_branch_miss || i_instruction_wr_en) begin 
+    if (i_branch_miss || i_instruction_wr_en) begin 
       if (i_branch_miss) pc_addr_reg <= i_branch_pc;
       o_fetch_instruction <= NOOP_INSTRUCTION;
     end else begin 
