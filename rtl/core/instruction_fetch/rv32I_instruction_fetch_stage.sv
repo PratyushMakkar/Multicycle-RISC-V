@@ -9,13 +9,14 @@ module RV32I_instruction_fetch_stage #(
   
   input logic i_decode_ready,
   output logic o_instruction_latch_en,
-  output instruction_fetch_t o_instruction_fetch_result,
+  output logic [31:0] o_fetch_instruction,
+  output logic [31:0] o_fetch_instruction_pc,
 
   // Outside of RISC-V Core signals
   input logic i_instruction_wr_en,
   input logic [31:0] i_instruction_wr_addr,
   input logic [31:0] i_instruction_wr_data,
-  input logic o_instruction_wr_valid
+  output logic o_instruction_wr_valid
 );
 
 // -------- Top level instruction fetch signals ------- //
@@ -48,26 +49,27 @@ always_comb begin : INSTRUCTION_MEM_INTERFACE
   instruction_mem_wr_data = i_instruction_wr_data;
   o_instruction_wr_valid = instruction_mem_wr_valid;
 
-
+  
   instruction_mem_rd_addr = pc_addr_reg;
   instruction_mem_rst = 1'b0;
   instruction_latch_en = 1'b0;
   instruction_mem_rd_en = 1'b1;
   if (i_branch_miss || i_rst) instruction_mem_rst = 1'b1;
   if ((instruction_mem_rd_valid && i_decode_ready) || i_branch_miss || i_rst) instruction_latch_en = 1'b1;
-  if (instruction_mem_rd_valid && !i_decode_ready) instruction_mem_rd_en = 1'b0;
+  if ((instruction_mem_rd_valid && !i_decode_ready) || i_instruction_wr_en) instruction_mem_rd_en = 1'b0;
 end
 
+logic [31:0] pc_addr_reg;
 always_ff @(posedge i_clk) begin : INSTRUCTION_FETCH_FSM
   pc_addr_reg <= REST_MEM_PTR;
 
   if (instruction_latch_en) begin
-    o_instruction_fetch_result.pc <= pc_addr_reg;
-    if (i_rst || i_branch_miss) begin 
-      if (branch_miss) pc_addr_reg <= i_branch_pc;
-      o_instruction_fetch_result.instruction <= NOOP_INSTRUCTION;
+    o_fetch_instruction_pc <= pc_addr_reg;
+    if (i_rst || i_branch_miss || i_instruction_wr_en) begin 
+      if (i_branch_miss) pc_addr_reg <= i_branch_pc;
+      o_fetch_instruction <= NOOP_INSTRUCTION;
     end else begin 
-      o_instruction_fetch_result.instruction <= instruction_mem_rd_data;
+      o_fetch_instruction <= instruction_mem_rd_data;
       pc_addr_reg <= pc_addr_reg + 'd4;
     end
   end

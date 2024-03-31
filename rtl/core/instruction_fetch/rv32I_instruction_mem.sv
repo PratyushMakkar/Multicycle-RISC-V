@@ -25,11 +25,11 @@ assign bram_wr_ptr = {i_wr_addr[8:2], write_upper_state};
 
 always_ff @(posedge i_clk) begin
   if (i_rst) begin
-    write_state <= LOWER_WORD;
-    read_state <= UPPER_WORD;
+    write_upper_state <= 1'b0;
+    read_upper_state <= 1'b0;
   end else begin
-    write_state <= write_upper_state ^ i_wr_en;
-    read_state <=  read_upper_state ^ i_rd_en;
+    write_upper_state <= write_upper_state ^ i_wr_en;
+    read_upper_state <=  read_upper_state ^ i_rd_en;
     if (~read_upper_state) rd_data_reg <= {rd_data_reg[31:16], bram_rd_data};
   end
 end

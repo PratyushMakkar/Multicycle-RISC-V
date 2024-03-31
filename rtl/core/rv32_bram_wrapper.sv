@@ -1,4 +1,5 @@
-module ICE40_BRAM #(parameter WORD_SIZE = 16, parameter ADDR_SIZE = 8) 
+module ICE40_BRAM #(parameter WORD_SIZE=16, parameter ADDR_SIZE=8) 
+(
   input logic wclk,
   input logic wen,
   input logic [WORD_SIZE-1 :0] wdata,
