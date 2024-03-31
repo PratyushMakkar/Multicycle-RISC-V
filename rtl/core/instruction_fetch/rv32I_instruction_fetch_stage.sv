@@ -66,7 +66,7 @@ always_ff @(posedge i_clk) begin : INSTRUCTION_FETCH_FSM
     o_fetch_instruction <= NOOP_INSTRUCTION;
   end 
   
-  else if (instruction_latch_en) begin
+  if (instruction_latch_en && !i_rst) begin
     o_fetch_instruction_pc <= pc_addr_reg;
     if (i_branch_miss || i_instruction_wr_en) begin 
       if (i_branch_miss) pc_addr_reg <= i_branch_pc;
