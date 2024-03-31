@@ -48,7 +48,7 @@ always_ff @(posedge i_clk) begin
   end 
   if (i_rd_en & !i_rst) begin
     bram_state_rd_control <= ~bram_state_rd_control;
-    file_reg_data <= (!bram_state_control) ? {o_reg_data[31:16], bram_read_data} : {bram_read_data, o_reg_data[15:0]};
+    file_reg_data <= (!bram_state_rd_control) ? {o_reg_data[31:16], bram_read_data} : {bram_read_data, o_reg_data[15:0]};
   end
 end
 

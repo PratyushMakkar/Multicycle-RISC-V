@@ -13,18 +13,21 @@ class instruction_fetch_stage_item(sequence_item):
     super().drive_item(dut)
     dut.i_operation_code.value = self.i_operation_code
     dut.i_cycle_length.value = self.i_cycle_length
+  
+  def randomize(self):
+    super().randomize()
+    self.i_operation_code = random.getrandbits(1)
+    self.i_cycle_length = random.getrandbits(4)
 
 class instruction_fetch_item(instruction_fetch_stage_item):
   def randomize(self):
     super().randomize()
     self.i_operation_code = 1
-    self.i_cycle_length = random.getrandbits(4)
 
 class load_instruction_item(instruction_fetch_stage_item):
   def randomize(self):
     super().randomize()
     self.i_operation_code = 0
-    self.i_cycle_length = random.getrandbits(4)
   
 class instruction_fetch_sequence(sequence):
   async def task_body(self):
