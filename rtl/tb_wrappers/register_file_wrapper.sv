@@ -13,6 +13,10 @@ module register_file_wrapper (
   output logic o_debug_clk
 );
 
+always @(debug_clk) begin
+  o_debug_clk <= debug_clk;
+end
+
 localparam logic [2:0] OPERATION_CODE_READ_WRITE = 3'b000;
 localparam logic [2:0] OPERATION_CODE_END_SIM = 3'b001;
 localparam logic [2:0] OPERATION_CODE_RESET_DUT = 3'b010;
@@ -53,18 +57,20 @@ task drive_item;
     begin
       debug_rd_en <= i_rd_en;
       debug_rd_reg_addr <= i_rd_reg_addr;
-      @(posedge debug_rd_valid);
-      @(negedge debug_clk);
+      if (i_rd_en) begin
+        @(posedge debug_rd_valid);
+        @(negedge debug_clk);
+      end
       o_debug_rd_reg_data <= debug_rd_reg_data;
     end  
     begin
       debug_wr_en <= i_wr_en;
       debug_wr_reg_addr <= i_dest_addr;
       debug_wr_reg_data <= i_dest_reg_data;
-      @(posedge debug_wr_valid);
+      if (i_wr_en) @(posedge debug_wr_valid);
     end
   join
-  @(posedge debug_clk)
+  @(posedge debug_clk);
   {debug_rd_en, debug_wr_en} <= 2'b00;
 endtask
 
@@ -73,7 +79,7 @@ task begin_test();
     if (i_operation_code == OPERATION_CODE_READ_WRITE) drive_item();
     else if (i_operation_code == OPERATION_CODE_RESET_DUT) resetDut();
     else if (i_operation_code == OPERATION_CODE_END_SIM) disable fork;
-
+    
     o_tx_complete = 1'b1;
     @(posedge i_rx_continue);
     o_tx_complete = 1'b0;
@@ -95,6 +101,7 @@ initial begin
   debug_wr_en <= 0;
   debug_wr_reg_addr <= 0;
   debug_wr_reg_data <= 0;
+  o_tx_complete <= 0;
 
   fork
     initializeClock();

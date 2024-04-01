@@ -33,11 +33,13 @@ class register_file_item(sequence_item):
 class read_only_register_tx(register_file_item):
   def randomize(self):
     super().randomize()
+    self.i_rd_en = 1
     self.i_wr_en = 0
 
 class write_only_register_tx(register_file_item):
   def randomize(self):
     super().randomize()
+    self.i_wr_en = 1
     self.i_rd_en = 0
 
 class read_write_register_tx(register_file_item):
@@ -54,7 +56,7 @@ class same_port_register_tx(read_write_register_tx):
 class write_only_register_sequence(sequence):
   async def task_body(self):
     await super().task_body()
-    for i in range(0, 1):
+    for i in range(0, 5):
       item : register_file_item = write_only_register_tx()
       item.randomize()
       self.sequencer.insert_sequence_item(item)
