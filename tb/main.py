@@ -1,25 +1,11 @@
+import os
+MY_TEST = os.environ['MY_TEST']
 
-import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge
-from cocotb.types import LogicArray, Logic
-
-from RV32Components.registerFileData import RegisterFileData
-from RV32Components.registerFileData import RegisterFileDUT, RegisterFileDriver
-
-async def clkSource(clk: Logic):
-  while (True):
-    await cocotb.triggers.Timer(10, 'ns')
-    clk.value = 0
-    await cocotb.triggers.Timer(10, 'ns')
-    clk.value = 1
-
-@cocotb.test()
-async def RV32I_Test(dut):
-  registerFileDUT : RegisterFileDUT = RegisterFileDUT(dut)
-  registerFileDriver : RegisterFileDriver = RegisterFileDriver(registerFileDUT)
-  clkThread = cocotb.start_soon(clkSource(dut.i_clk))
-  registerFileDriver.buildPhase()
-  await registerFileDriver.runPhase()
-
-
+match MY_TEST:
+  case "INSTRUCTION_FETCH_STAGE":
+    from tests.rv32_instruction_fetch_test import rv32_instruction_fetch_sanity_test, rv32_instruction_repeated_test
+  case "ALU_EXECUTE_FSM":
+    from tests.rv32_alu_fsm_test import rv32_alu_fsm_test
+  case "REGISTER_FILE_TEST":
+    from tests.rv32_register_file_test import directed_sanity_test, write_only_sanity_test
 

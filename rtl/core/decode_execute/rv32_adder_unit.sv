@@ -18,7 +18,7 @@ assign c_in[15:0] = {c_out[14:0], i_c_in};
 
 `ifdef SIM 
 always @(*) begin
-  if (sel == 00) {c_out, l_o} = i_operand_one + i_operand_two;
+  if (sel == 00) {c_out[15], l_o} = i_operand_one + i_operand_two + i_c_in;
   if (sel == 01) l_o = i_operand_one | i_operand_two;
   if (sel == 10) l_o = i_operand_one & i_operand_two;
   if (sel == 11) l_o = i_operand_one ^ i_operand_two;

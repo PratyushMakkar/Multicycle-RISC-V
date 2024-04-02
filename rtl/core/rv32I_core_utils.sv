@@ -1,6 +1,6 @@
 package RV32I_core_utils_package;
 
-  localparam NOOP_INSTR = 32'h00000000 + I_TYPE_OPCODE;
+  localparam NOOP_INSTRUCTION = 32'h00000000 + I_TYPE_OPCODE;
 
   /////////// ---------------------------------- DECODE STAGE ----------------------------------- ///////
   typedef enum logic [3:0] {ALU_NOOP = 4'b000, ADD, OR, AND,  
