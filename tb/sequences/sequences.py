@@ -1,34 +1,25 @@
 import cocotb
 from cocotb.triggers import FallingEdge, RisingEdge
-
-async def await_transaction(dut):
-  await RisingEdge(dut.o_tx_complete)
-  dut.i_rx_continue.value = 1
-  await FallingEdge(dut.o_tx_complete)
-
-def begin_next_transaction(dut):
-  dut.i_rx_continue.value = 0
+from cocotb.queue import Queue
 
 class sequence_item():
   def randomize(self):
     pass
 
-  def drive_item(self, dut):
-    pass
-
 class sequencer_handle():
-  def __init__(self, dut):
+  def __init__(self, req_q, resp_q):
     self.sequence_items = []
     self.response_items = []
-    self.dut = dut
+    self.request_q = req_q
+    self.response_q = resp_q
 
   def insert_sequence_item(self, item):
     self.sequence_items.append(item)
 
   async def drive_sequence_item(self, item : sequence_item):
-    begin_next_transaction(self.dut)
-    item.drive_item(self.dut)
-    await await_transaction(self.dut)
+    await self.request_q.put(item)
+    item_resp = await self.response_q.get()
+    self.response_items.append(item_resp)
 
   async def drive_sequence(self):
     for item in self.sequence_items:
