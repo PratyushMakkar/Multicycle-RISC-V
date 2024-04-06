@@ -22,7 +22,7 @@ module RV32I_instruction_fetch_stage #(
 // -------- Top level instruction fetch signals ------- //
 logic instruction_latch_en;
 
-// --------------------- Instrcuction memory interface ------- //
+// --------------------- Instruction memory interface ------- //
 logic instruction_mem_rd_en, instruction_mem_rd_valid;
 logic [31:0] instruction_mem_rd_addr, instruction_mem_rd_data;
 logic instruction_mem_rst;
@@ -49,7 +49,6 @@ always_comb begin : INSTRUCTION_MEM_INTERFACE
   instruction_mem_wr_data = i_instruction_wr_data;
   o_instruction_wr_valid = instruction_mem_wr_valid;
 
-  
   instruction_mem_rd_addr = pc_addr_reg;
   instruction_mem_rst = 1'b0;
   instruction_latch_en = 1'b0;
@@ -67,7 +66,6 @@ always_ff @(posedge i_clk) begin : INSTRUCTION_FETCH_FSM
   end 
   
   if (instruction_latch_en && !i_rst) begin
-    o_fetch_instruction_pc <= pc_addr_reg;
     if (i_branch_miss || i_instruction_wr_en) begin 
       if (i_branch_miss) pc_addr_reg <= i_branch_pc;
       o_fetch_instruction <= NOOP_INSTRUCTION;
@@ -76,7 +74,9 @@ always_ff @(posedge i_clk) begin : INSTRUCTION_FETCH_FSM
       pc_addr_reg <= pc_addr_reg + 'd4;
     end
   end
+
+  o_instruction_latch_en <= instruction_latch_en;
 end
 
-assign o_instruction_latch_en = instruction_latch_en;
+assign o_fetch_instruction_pc = pc_addr_reg;
 endmodule

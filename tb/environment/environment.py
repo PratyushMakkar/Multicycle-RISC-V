@@ -12,5 +12,8 @@ class driver():
   async def put_tx_resp(self, item):
     await self.sequencer_resp_q.put(item)
   
+  async def reset_sequence(self):
+    pass
+
   async def driver_routine(self):
     pass

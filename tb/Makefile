@@ -37,6 +37,7 @@ PYTHON_DIR := $(TB_DIR)
 PYTHON_DIR += $(TB_DIR)/lib
 PYTHON_DIR += $(TB_DIR)/RV32Components
 PYTHON_DIR += $(TB_DIR)/sequences
+PYTHON_DIR += $(TB_DIR)/environment
 PYTHON_DIR += $(TB_DIR)/tests
 
 TOPLEVEL =  $(TOP) 
