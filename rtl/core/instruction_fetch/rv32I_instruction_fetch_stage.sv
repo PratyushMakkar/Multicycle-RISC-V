@@ -8,7 +8,7 @@ module RV32I_instruction_fetch_stage #(
   input logic i_branch_miss,
   
   input logic i_decode_ready,
-  output logic o_instruction_latch_en,
+  output logic o_instruction_ready,
   output logic [31:0] o_fetch_instruction,
   output logic [31:0] o_fetch_instruction_pc,
 
@@ -20,7 +20,8 @@ module RV32I_instruction_fetch_stage #(
 );
 
 // -------- Top level instruction fetch signals ------- //
-logic instruction_latch_en;
+typedef enum {FETCH, FETCH_LATCH_AWAIT, LOAD} instruction_state_t;
+instruction_state_t current_state, next_state;
 
 // --------------------- Instruction memory interface ------- //
 logic instruction_mem_rd_en, instruction_mem_rd_valid;
@@ -43,40 +44,90 @@ RV32I_instruction_mem INSTRUCTION_CACHE (
   .o_rd_valid(instruction_mem_rd_valid)
 );
 
-always_comb begin : INSTRUCTION_MEM_INTERFACE
-  instruction_mem_wr_en = i_instruction_wr_en;
-  instruction_mem_wr_addr = i_instruction_wr_addr;
-  instruction_mem_wr_data = i_instruction_wr_data;
-  o_instruction_wr_valid = instruction_mem_wr_valid;
+// ---------------- Three always block style FSM ------------- //
+logic [31:0] pc_addr_reg, pc_addr;
+logic pc_addr_latch_en;
 
-  instruction_mem_rd_addr = pc_addr_reg;
-  instruction_mem_rst = 1'b0;
+logic [31:0] instruction_reg, next_instruction;
+logic instruction_latch_en;
+
+always_comb begin : NEXT_STATE_LOGIC_BLOCK
+  next_instruction = NOOP_INSTRUCTION;
+  pc_addr = REST_MEM_PTR;
   instruction_latch_en = 1'b0;
-  instruction_mem_rd_en = 1'b1;
-  if (i_branch_miss || i_rst) instruction_mem_rst = 1'b1;
-  if ((instruction_mem_rd_valid && i_decode_ready) || i_branch_miss || i_rst) instruction_latch_en = 1'b1;
-  if ((instruction_mem_rd_valid && !i_decode_ready) || i_instruction_wr_en) instruction_mem_rd_en = 1'b0;
-end
+  pc_addr_latch_en = 1'b0;
 
-logic [31:0] pc_addr_reg;
-always_ff @(posedge i_clk) begin : INSTRUCTION_FETCH_FSM
-  if (i_rst) begin 
-    pc_addr_reg <= REST_MEM_PTR;
-    o_fetch_instruction <= NOOP_INSTRUCTION;
-  end 
-  
-  if (instruction_latch_en && !i_rst) begin
-    if (i_branch_miss || i_instruction_wr_en) begin 
-      if (i_branch_miss) pc_addr_reg <= i_branch_pc;
-      o_fetch_instruction <= NOOP_INSTRUCTION;
-    end else begin 
-      o_fetch_instruction <= instruction_mem_rd_data;
-      pc_addr_reg <= pc_addr_reg + 'd4;
-    end
+  if (i_rst) begin
+    pc_addr_latch_en = 1'b1;
+    instruction_latch_en = 1'b1;
+    next_state = FETCH;
   end
 
-  o_instruction_latch_en <= instruction_latch_en;
+  else if (i_branch_miss) begin
+    pc_addr = i_branch_pc;
+    pc_addr_latch_en = 1'b1;
+    instruction_latch_en = 1'b1;
+    next_state = FETCH;
+  end
+
+  else begin : NORMAL_FSM_SEQUENCE
+    case (current_state)
+      FETCH: begin
+        if (i_instruction_wr_en) next_state = LOAD;
+        if (i_decode_ready)      next_state = FETCH;
+        if (instruction_mem_rd_valid) begin
+          {instruction_latch_en, pc_addr_latch_en} = 2'b11;
+          next_instruction = instruction_mem_rd_data;
+          pc_addr = pc_addr_reg + 32'd4;
+
+          if (!i_decode_ready) next_state = FETCH_LATCH_AWAIT;
+          else                 next_state = FETCH;
+        end
+      end
+      FETCH_LATCH_AWAIT: begin
+        if (i_instruction_wr_en)  next_state = LOAD;
+        else if (i_decode_ready)  next_state = FETCH;
+        else                      next_state = FETCH_LATCH_AWAIT;
+      end
+      LOAD: begin
+        if (!i_instruction_wr_en)          next_state = FETCH;
+        else                               next_state = LOAD;
+      end
+    endcase
+  end
 end
 
+always_ff @(posedge i_clk) begin : SEQUENTIAL_LOGIC_BLOCK
+  if (i_rst) next_state <= FETCH;
+  else next_state <= current_state;
+
+  if (pc_addr_latch_en) pc_addr_reg <= pc_addr;
+  if (instruction_latch_en) instruction_reg <= next_instruction;
+end
+
+always_comb begin : COMBO_OUTPUT_BLOCK
+  instruction_mem_wr_en = 1'b0;
+  instruction_mem_rd_en = 1'b0;
+  o_instruction_ready = 1'b0;
+
+  case (current_state)
+    FETCH: begin 
+      instruction_mem_rd_en = 1'b1;
+      o_instruction_ready = instruction_mem_rd_valid;
+    end
+    FETCH_LATCH_AWAIT: begin 
+      instruction_mem_rd_en = 1'b0;
+      o_instruction_ready = 1'b1;
+    end
+    LOAD: instruction_mem_wr_en = 1'b1;
+  endcase
+end
+
+assign instruction_mem_rst = i_rst;
+assign instruction_mem_rd_addr = pc_addr_reg;
+assign instruction_mem_wr_addr = i_instruction_wr_addr;
+assign instruction_mem_wr_data = i_instruction_wr_data;
+assign o_instruction_wr_valid = instruction_mem_wr_valid;
+assign o_fetch_instruction = instruction_reg;
 assign o_fetch_instruction_pc = pc_addr_reg;
 endmodule
