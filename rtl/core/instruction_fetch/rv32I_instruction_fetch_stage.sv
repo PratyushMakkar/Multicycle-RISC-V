@@ -1,5 +1,4 @@
-module RV32I_instruction_fetch_stage #(
-  parameter REST_MEM_PTR = 32'd0) 
+module RV32I_instruction_fetch_stage #(parameter REST_MEM_PTR = 32'd0) 
 (
   input logic i_clk,
   input logic i_rst,
@@ -79,19 +78,20 @@ always_comb begin : NEXT_STATE_LOGIC_BLOCK
           {instruction_latch_en, pc_addr_latch_en} = 2'b11;
           next_instruction = instruction_mem_rd_data;
           pc_addr = pc_addr_reg + 32'd4;
-
-          if (!i_decode_ready) next_state = FETCH_LATCH_AWAIT;
-          else                 next_state = FETCH;
+          if (!i_decode_ready)    next_state = FETCH_LATCH_AWAIT;
+          else                    next_state = FETCH;
         end
       end
+      
       FETCH_LATCH_AWAIT: begin
         if (i_instruction_wr_en)  next_state = LOAD;
         else if (i_decode_ready)  next_state = FETCH;
         else                      next_state = FETCH_LATCH_AWAIT;
       end
+
       LOAD: begin
-        if (!i_instruction_wr_en)          next_state = FETCH;
-        else                               next_state = LOAD;
+        if (!i_instruction_wr_en) next_state = FETCH;
+        else                      next_state = LOAD;
       end
     endcase
   end
@@ -109,11 +109,16 @@ always_comb begin : COMBO_OUTPUT_BLOCK
   instruction_mem_wr_en = 1'b0;
   instruction_mem_rd_en = 1'b0;
   o_instruction_ready = 1'b0;
+  o_fetch_instruction = instruction_reg;
 
   case (current_state)
     FETCH: begin 
       instruction_mem_rd_en = 1'b1;
-      o_instruction_ready = instruction_mem_rd_valid;
+      if (instruction_mem_rd_valid) begin : SKID_BUFFER
+        o_instruction_ready = instruction_mem_rd_valid;
+        o_fetch_instruction = next_instruction;
+        o_fetch_instruction_pc = pc_addr;
+      end
     end
     FETCH_LATCH_AWAIT: begin 
       instruction_mem_rd_en = 1'b0;
@@ -128,6 +133,5 @@ assign instruction_mem_rd_addr = pc_addr_reg;
 assign instruction_mem_wr_addr = i_instruction_wr_addr;
 assign instruction_mem_wr_data = i_instruction_wr_data;
 assign o_instruction_wr_valid = instruction_mem_wr_valid;
-assign o_fetch_instruction = instruction_reg;
 assign o_fetch_instruction_pc = pc_addr_reg;
 endmodule
