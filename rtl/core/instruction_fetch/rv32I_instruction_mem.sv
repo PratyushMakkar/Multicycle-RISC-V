@@ -38,11 +38,16 @@ end
 always_ff @(posedge i_clk) begin
   if (i_rst) begin
     write_upper_state <= 1'b0;
-    read_upper_state <= 'd0;
-  end else begin
-    write_upper_state <= write_upper_state ^ i_wr_en;
+    read_upper_state <= S0;
+  end 
+  
+  else begin
+    if (i_wr_en) write_upper_state <= ~write_upper_state;
+    else write_upper_state <= 0;
 
-    read_upper_state <=  next_upper_state;
+    if (i_rd_en) read_upper_state <=  next_upper_state;
+    else read_upper_state <= S0;
+
     if (read_upper_state == S1) rd_data_reg <= {rd_data_reg[31:15], bram_rd_data};
   end
 end

@@ -99,7 +99,7 @@ end
 
 always_ff @(posedge i_clk) begin : SEQUENTIAL_LOGIC_BLOCK
   if (i_rst) next_state <= FETCH;
-  else next_state <= current_state;
+  else current_state <= next_state;
 
   if (pc_addr_latch_en) pc_addr_reg <= pc_addr;
   if (instruction_latch_en) instruction_reg <= next_instruction;

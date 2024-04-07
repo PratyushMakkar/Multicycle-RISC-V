@@ -18,9 +18,6 @@ INSTRUCTION_FETCH_RTL_SRCS +=  $(RTL_DIR)/core/instruction_fetch/rv32I_instructi
 INSTRUCTION_FETCH_RTL_SRCS +=  $(RTL_DIR)/core/instruction_fetch/rv32I_instruction_mem.sv
 
 SV_TB_DIR := $(RTL_DIR)/tb_wrappers/rv32_tb_package.sv
-SV_TB_DIR += $(RTL_DIR)/tb_wrappers/alu_execute_fsm_wrapper.sv
-SV_TB_DIR += $(RTL_DIR)/tb_wrappers/instruction_fetch_fsm_wrapper.sv
-SV_TB_DIR += $(RTL_DIR)/tb_wrappers/register_file_wrapper.sv
 
 VERILOG_SOURCES :=
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_package.sv
