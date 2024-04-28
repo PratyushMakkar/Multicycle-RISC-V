@@ -1,4 +1,4 @@
-module RV32I_register_file (
+module RV32I_register_file #(parameter WIDTH = 32) (
   input logic i_clk,
   input logic i_rst,
   input logic i_rd_en,
@@ -7,7 +7,7 @@ module RV32I_register_file (
 
   input logic i_wr_en,
   input logic [4:0] i_dest_addr,
-  input logic [31:0] i_dest_reg_data,
+  input logic [WIDTH-1:0] i_dest_reg_data,
 
   output logic o_rd_valid,
   output logic o_wr_valid
@@ -19,7 +19,7 @@ logic bram_write_state;
 always_comb begin
   case (bram_read_state)
     S0: bram_next_state = S1;
-    S1: bram_read_state = S2;
+    S1: bram_next_state = S2;
     S2: bram_next_state = S0;
   endcase
 end
