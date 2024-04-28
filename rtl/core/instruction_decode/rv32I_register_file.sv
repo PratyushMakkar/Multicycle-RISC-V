@@ -50,9 +50,13 @@ always_ff @(posedge i_clk) begin
   if (i_rst) begin
     bram_write_state <= 1'b0;
     bram_read_state <= S0;
-  end else if (i_wr_en ) begin 
+  end 
+  
+  else if (i_wr_en) begin 
     bram_write_state <= ~bram_write_state;
-  end else if (i_rd_en) begin
+  end 
+  
+  else if (i_rd_en) begin
     bram_read_state <= bram_next_state;
     latched_read_data <= (bram_read_state == S0) ? {latched_read_data[31:16], bram_read_data} : {bram_read_data, latched_read_data[15:0]};
   end
