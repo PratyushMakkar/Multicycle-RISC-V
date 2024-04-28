@@ -1,5 +1,4 @@
 .venv
 tb/lib/sim_build
-synth/yosys
 tb/lib/**.__pycache__
 .vscode

@@ -3,14 +3,29 @@ package RV32I_core_utils_package;
   localparam NOOP_INSTRUCTION = 32'h00000000 + I_TYPE_OPCODE;
 
   /////////// ---------------------------------- DECODE STAGE ----------------------------------- ///////
-  typedef enum logic [3:0] {ALU_NOOP = 4'b000, ADD, OR, AND,  
-                            XOR, LL_SHIFT, LR_SHIFT, AR_SHIFT, SUB, SLT, SLTU, EQ_ZERO} alu_op_t; // EQ_ZERO just tests if the value is equal to zero.
-  typedef enum logic [1:0] {BYTE, HALF_WORD, WORD} memory_size_t;
-  typedef enum logic [1:0] {MEM_NOOP = 0, LOAD, STORE} memory_op_t;
-  typedef enum logic       {WB_NOOP = 1'b0, WB} writeback_op_t;
+  localparam logic [3:0] ADD = 4'b0000;
+  localparam logic [3:0] SLL = 4'b0001;
+  localparam logic [3:0] SLT = 4'b0010;
+  localparam logic [3:0] SLTU = 4'b0011;
+  localparam logic [3:0] XOR = 4'b0100;
+  localparam logic [3:0] SRL = 4'b0101;
+  localparam logic [3:0] OR = 4'b0110;
+  localparam logic [3:0] AND = 4'b0111;
+  localparam logic [3:0] ALU_NOOP  = 4'b1000;
+
+  localparam logic [1:0] BYTE = 2'b00;
+  localparam logic [1:0] HALF_WORD = 2'b01;
+  localparam logic [1:0] WORD = 2'b10;
+
+  localparam logic [1:0] LOAD = 2'b00;
+  localparam logic [1:0] STORE = 2'b01;
+  localparam logic [1:0] MEM_NOOP = 2'b11; 
+
+  localparam logic WB_NOOP = 1'b0;
+  localparam logic WB_EN   = 1'b1;
 
   ////// ------------ Instruction opcodes ---------- //////
-  // Special instruction opcodes
+  // Other Instruction Opcodes
   localparam LUI_OPCODE   = 7'b0110111;
   localparam AUIPC_OPCODE = 7'b0010111;
   localparam JAL_OPCODE   = 7'b1101111;

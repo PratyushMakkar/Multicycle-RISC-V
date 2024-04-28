@@ -24,6 +24,7 @@ class sequencer_handle():
   async def drive_sequence(self):
     for item in self.sequence_items:
       await self.drive_sequence_item(item)
+    self.sequence_items = []
 
 class sequence():
   def __init__(self, sequencer : sequencer_handle):

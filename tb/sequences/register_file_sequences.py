@@ -14,16 +14,6 @@ class register_file_item(sequence_item):
     self.i_operation_code = 0
     self.i_rst = 0
 
-  def drive_item(self, dut):
-    super().drive_item(dut)
-    dut.i_rd_en.value = self.i_rd_en
-    dut.i_wr_en.value = self.i_wr_en
-    dut.i_rd_reg_addr.value = self.i_rd_reg_addr
-    dut.i_dest_addr.value = self.i_dest_addr
-    dut.i_dest_reg_data.value = self.i_dest_reg_data
-    dut.i_operation_code.value = self.i_operation_code
-    dut.i_rst.value = 0
-  
   def randomize(self):
     super().randomize()
     self.i_rd_en = random.getrandbits(1)

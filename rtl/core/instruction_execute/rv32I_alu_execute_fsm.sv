@@ -110,11 +110,13 @@ always_comb begin
 end
 
 always_ff @(posedge i_clk) begin
-  if (i_rst) begin 
-    alu_op_state <= 3'b000;
-  end else begin 
-    if (i_en_alu) alu_op_state <= alu_op_state + 1'b1;
-  end
+    if (i_en_alu) begin 
+      alu_op_state <= alu_op_state + 1'b1;
+    end
+
+    if (i_rst) begin 
+      alu_op_state <= 3'b000; 
+    end
 end
 
 assign o_result = {temp_register_d, temp_register_q};

@@ -1,35 +1,28 @@
 
 import cocotb
 from cocotb.triggers import FallingEdge, RisingEdge
-from sequences.rv32_instruction_fetch_sequences import instruction_fetch_sequence, load_instruction_sequence
+from sequences.rv32_instruction_fetch_sequences import instruction_fetch_sequence, load_instruction_sequence, fetch_reset_sequence
 from sequences.sequences import sequencer_handle
+from cocotb.queue import Queue
+from cocotb.clock import Clock
 
-@cocotb.test()
-async def rv32_instruction_fetch_sanity_test(dut):
-  dut.i_operation_code.value = 0
-  dut.i_cycle_length.value = 20 
-  await RisingEdge(dut.o_tx_complete)
+from environment.rv32_instruction_fetch_env import rv32_instruction_fetch_driver
 
-  dut.i_rx_continue.value = 1
-  await FallingEdge(dut.o_tx_complete)
-  dut.i_operation_code.value = 3
-  dut.i_rx_continue.value = 0
-
-  await RisingEdge(dut.o_tx_complete)
-
-  dut.i_rx_continue.value = 1
-  await FallingEdge(dut.o_tx_complete)
-  dut.i_operation_code.value = 1
-  dut.i_cycle_length.value = 15
-  
 @cocotb.test()
 async def rv32_instruction_repeated_test(dut):
-  handle = sequencer_handle(dut)
-  load_seq = load_instruction_sequence(handle)
-  fetch_seq = instruction_fetch_sequence(handle)
-  await load_seq.task_body()
-  await fetch_seq.task_body()
+  request_queue = Queue(5)
+  response_queue = Queue(5)
 
+  driver = rv32_instruction_fetch_driver(dut, request_queue, response_queue)
+  handle = sequencer_handle(request_queue, response_queue)
+  reset_seq = fetch_reset_sequence(handle)
+  load_seq = load_instruction_sequence(handle)
+
+  cocotb.start_soon(Clock(dut.i_clk, 1000).start())
+  cocotb.start_soon(driver.driver_routine())
+  
+  await reset_seq.task_body()
+  await load_seq.task_body()
 
 
  
