@@ -12,19 +12,17 @@ module rv32I_decode_controller #(parameter INSTRUCTION_WIDTH = 32, parameter WOR
   output logic o_str_type_opcode_instr,
 
   // ----------- EX / Branch Adder Stage Operands -------------- //
-  output logic o_carry_in,
-  output logic o_signed_operand,
-  output logic o_pc_operand, 
+  output logic o_pc_operand,
   output logic [3:0] o_alu_op,
   output logic [WORD_SIZE-1:0] o_alu_src_immediate,
   output logic [4:0] o_alu_src_a_reg,
   output logic [4:0] o_alu_src_b_reg,
   output logic [4:0] o_alu_dest_reg,
 
-  output logic [3:0] o_branch_op,
-  output logic o_branch_beq_test,  // If branch adder op is Add, then if its NE/EQ //
+  output logic [2:0] o_branch_op,
   
   // --------- Memory Stage Pipeline Signals ----------- //
+  output logic o_memory_sign_extend,
   output logic [1:0] o_memory_op,
   output logic [1:0] o_memory_operand_size,
 
@@ -47,7 +45,6 @@ assign o_ld_type_opcode_instr = (instr_opcode == LD_TYPE_OPCODE);
 assign o_str_type_opcode_instr = (instr_opcode == STR_TYPE_OPCODE);
 
 // -------- I-Type-Decoding ------------ //
-
 wire o_i_addi_instr  = (instr_func == I_ADDI_FUNC) & o_i_type_opcode_instr;
 wire o_i_sltiu_instr = (instr_func == I_SLTIU_FUNC) & o_i_type_opcode_instr;
 wire o_i_slti_instr  = (instr_func == I_SLTI_FUNC) & i_type_opcode_instr;
@@ -105,97 +102,306 @@ wire [4:0] alu_dest_reg     = i_fetch_instruction[11:7];
 wire sign_extend_lower_imm = (o_i_addi_instr | o_i_slti_instr | o_i_sltiu_instr | o_i_ori_instr | o_i_xori_instr | o_i_andi_instr);
 
 always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
-  o_carry_in = 1'b0;
-  o_signed_operand = 1'b0;
   o_alu_op = ALU_NOOP;
   o_alu_src_immediate = 32'd0;
-  o_alu_src_b_reg = 5'd0;
-  o_pc_operand = 1'b0;
-  o_branch_op = ALU_NOOP;
-  o_branch_beq_test = 1'b0;
+  o_alu_src_a_reg = 0;
+  o_alu_src_b_reg = 0;
+  o_alu_dest_reg  = 0;
 
-  o_alu_src_a_reg = alu_src_a_reg;
-  o_alu_src_b_reg = alu_src_b_reg;
-  o_alu_dest_reg = alu_src_dest_reg;
+  o_branch_op = BRANCH_NOOP;
+  o_pc_operand = 1'b0;
 
   o_memory_op = MEM_NOOP;
   o_memory_operand_size = BYTE;
 
-  o_writeback_op = WB_EN;
+  o_writeback_op = WB_NOOP;
 
-  if (o_i_type_opcode_instr) begin
-    if (sign_extend_lower_imm) begin 
-      o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate};
-    end else if (o_i_slli_instr | o_i_srli_instr | o_i_srai_instr) begin 
-      o_alu_src_immediate = {{27{1'b0}}, shamt};
-    end else if (o_auipc_instr | o_lui_instr) begin 
-      o_alu_src_immediate = {upper_immediate, {12{1'b0}}};
-    end
-
-    if (o_i_slti_instr | o_i_srai_instr) begin 
-      o_signed_operand = 1'b1;
-    end
-
-    if (o_auipc_instr) begin 
-      o_pc_operand = 1'b1;
-    end
-
-    if (o_lui_instr) begin 
-      o_alu_op = ALU_NOOP;
-    end else begin 
-      o_alu_op = {1'b0, instr_func};
-    end
-
-  end
-
-  if (o_r_type_opcode_instr) begin
-    if (o_r_slt_instr | o_r_sra_instr) begin 
-      o_signed_operand = 1'b1;
-    end
-
-    if (o_r_sub_instr) begin 
-      o_carry_in = 1'b1;
-    end
-
-    o_alu_op = {1'b0, instr_func};
-  end
-
-  if (o_b_type_opcode_instr) begin
-    o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate[10:5], alu_dest_reg[0], alu_dest_reg[4:1], 1'b0};
-
-    if (o_b_bge_instr | o_b_bgeu_instr) begin
-        o_alu_src_a_reg = alu_src_b_reg;
-        o_alu_src_b_reg = alu_src_a_reg;
-    end
-
-    if (o_b_bge_instr | o_b_blt_instr) begin 
-      o_branch_op = SLT;
-    end else if (o_b_bge_instr | o_b_bgeu_instr) begin 
-      o_branch_op = SLTU;
-    end else begin 
-      o_branch_op = ADD;
-    end
-    
-    o_branch_beq_test = o_b_beq_instr; 
-  end
-
-  if (o_ld_type_opcode_instr) begin
+  if (o_i_addi_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
     o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate};
+    o_writeback_op = WB_EN;
     o_alu_op = ADD;
   end
 
-  if (o_str_type_opcode_instr) begin
-    o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate[11:5], alu_src_dest_reg};
-    o_writeback_op = WB_NOOP;
+  if (o_i_sltiu_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = lower_immediate;
+    o_writeback_op = WB_EN;
+    o_alu_op = SLTU;
+  end
+
+  if (o_i_slti_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate};;
+    o_writeback_op = WB_EN;
+    o_alu_op = SLT;
+  end
+
+  if (o_i_ori_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate};;
+    o_writeback_op = WB_EN;
+    o_alu_op = OR;
+  end
+
+  if (o_i_xori_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate};;
+    o_writeback_op = WB_EN;
+    o_alu_op = XOR;
+  end
+
+  if (o_i_andi_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = {{20{lower_immediate[11]}}, lower_immediate};;
+    o_writeback_op = WB_EN;
+    o_alu_op = AND;
+  end
+
+  if (o_i_slli_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = shamt;
+    o_writeback_op = WB_EN;
+    o_alu_op = SLL;
+  end
+
+  if (o_i_srli_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = shamt;
+    o_writeback_op = WB_EN;
+    o_alu_op = SRL;
+  end
+
+  if (o_i_srai_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = shamt;
+    o_writeback_op = WB_EN;
+    o_alu_op = SRA;
+  end
+
+  if (o_i_auipc_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = upper_immediate;
+    o_writeback_op = WB_EN;
+    o_alu_op = ADD;
+    o_pc_operand = 1'b1;
+  end
+
+  if (o_i_lui_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_immediate = upper_immediate;
+    o_writeback_op = WB_EN;
+    o_alu_op = LUI;
+  end
+
+  if (o_r_add_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
     o_alu_op = ADD;
   end
 
-  if (o_ld_type_opcode_instr | o_str_type_opcode_instr) begin : MEMORY_OPERAND_ENCODE
-    {o_signed_operand, o_memory_operand_size} = instr_func;
-    o_memory_op = {1'b0, instr_opcode[5]};
-  end 
-end
+  if (o_r_sub_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = SUB;
+  end
 
+  if (o_r_xor_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = XOR;
+  end
+
+  if (o_r_or_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = OR;
+  end
+
+  if (o_r_and_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = AND:
+  end
+
+  if (o_r_srl_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = SRL;
+  end
+
+  if (o_r_sra_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = SRA;
+  end
+
+  if (o_r_sll_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = SLL;
+  end
+
+  if (o_r_slt_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = SLT:
+  end
+
+  if (o_r_sltu_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_dest_reg = alu_dest_reg;
+    o_writeback_op = WB_EN;
+    o_alu_op = SLTU;
+  end
+
+  if (o_b_beq_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_immediate = {i_fetch_instruction[31], i_fetch_instruction[7], i_fetch_instruction[30:25], i_fetch_instruction[11:8]};
+    o_branch_op = BRANCH_BEQ;
+  end
+
+  if (o_b_bne_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_immediate = {i_fetch_instruction[31], i_fetch_instruction[7], i_fetch_instruction[30:25], i_fetch_instruction[11:8]};
+    o_branch_op = BRANCH_BNE;
+  end
+
+  if (o_b_blt_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_immediate = {i_fetch_instruction[31], i_fetch_instruction[7], i_fetch_instruction[30:25], i_fetch_instruction[11:8]};
+    o_branch_op = BRANCH_BLT;
+  end
+
+  if (o_b_bge_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_immediate = {i_fetch_instruction[31], i_fetch_instruction[7], i_fetch_instruction[30:25], i_fetch_instruction[11:8]};
+    o_branch_op = BRANCH_BGE;
+  end
+
+  if (o_b_bltu_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_immediate = {i_fetch_instruction[31], i_fetch_instruction[7], i_fetch_instruction[30:25], i_fetch_instruction[11:8]};
+    o_branch_op = BRANCH_BLTU;
+  end
+
+  if (o_b_bgeu_instr) begin
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_immediate = {i_fetch_instruction[31], i_fetch_instruction[7], i_fetch_instruction[30:25], i_fetch_instruction[11:8]};
+    o_branch_op = BRANCH_BGEU;
+  end
+
+  if (o_ld_lb_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
+    o_alu_op = ADD_MEM;
+    o_writeback_op = WB_EN;
+    o_memory_op = LOAD:
+    o_memory_sign_extend = 1'b1;
+    o_memory_operand_size = BYTE;
+  end
+
+  if (o_ld_lh_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
+    o_alu_op = ADD_MEM;
+    o_writeback_op = WB_EN;
+    o_memory_op = LOAD:
+    o_memory_sign_extend = 1'b1;
+    o_memory_operand_size = HALF_WORD;
+  end
+
+  if (o_ld_lw_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
+    o_alu_op = ADD_MEM;
+    o_writeback_op = WB_EN;
+    o_memory_op = LOAD:
+    o_memory_sign_extend = 1'b1;
+    o_memory_operand_size = WORD;
+  end
+
+  if (o_ld_lbu_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
+    o_alu_op = ADD_MEM;
+    o_writeback_op = WB_EN;
+    o_memory_op = LOAD:
+    o_memory_operand_size = BYTE;
+  end
+
+  if (o_ld_lhu_instr) begin
+    o_alu_dest_reg = alu_dest_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
+    o_alu_op = ADD_MEM;
+    o_writeback_op = WB_EN;
+    o_memory_op = LOAD:
+    o_memory_operand_size = HALF_WORD;
+  end
+
+  if (o_st_sb_instr) begin
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]}};
+    o_alu_op = ADD_MEM;
+    o_memory_op = STORE;
+  end
+
+  if (o_st_sh_instr) begin
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]}};
+    o_alu_op = ADD_MEM;
+    o_memory_op = STORE;
+  end
+
+  if (o_st_sw_instr) begin
+    o_alu_src_b_reg = alu_src_b_reg;
+    o_alu_src_a_reg = alu_src_a_reg;
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]}};
+    o_alu_op = ADD_MEM;
+    o_memory_op = STORE;
+  end
 endmodule
 
 
+// TODO:  Branch OP

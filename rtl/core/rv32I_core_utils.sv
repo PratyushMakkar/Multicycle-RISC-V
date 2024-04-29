@@ -9,15 +9,27 @@ package RV32I_core_utils_package;
   localparam logic [3:0] SLTU = 4'b0011;
   localparam logic [3:0] XOR = 4'b0100;
   localparam logic [3:0] SRL = 4'b0101;
+  localparam logic [3:0] SRA = 4'b1001;
   localparam logic [3:0] OR = 4'b0110;
   localparam logic [3:0] AND = 4'b0111;
+  localparam logic [3:0] LUI = 4'b1010;
+  localparam logic [3:0] ADD_MEM = 4'b1011;
   localparam logic [3:0] ALU_NOOP  = 4'b1000;
 
+  localparam logic [2:0] BRANCH_BEQ = 3'b000;
+  localparam logic [2:0] BRANCH_BNE = 3'b001;
+  localparam logic [2:0] BRANCH_BLT = 3'b010;
+  localparam logic [2:0] BRANCH_BGE = 3'b011;
+  localparam logic [2:0] BRANCH_BLTU = 3'b100;
+  localparam logic [2:0] BRANCH_BGEU = 3'b101;
+  localparam logic [2:0] BRANCH_NOOP = 3'b110;
+  
   localparam logic [1:0] BYTE = 2'b00;
   localparam logic [1:0] HALF_WORD = 2'b01;
   localparam logic [1:0] WORD = 2'b10;
 
   localparam logic [1:0] LOAD = 2'b00;
+  localparam logic [1:0] LOAD_SIGN_EXTEND = 2'b00;
   localparam logic [1:0] STORE = 2'b01;
   localparam logic [1:0] MEM_NOOP = 2'b11; 
 
