@@ -27,11 +27,11 @@ assign multiplier_sign_extended = (i_execute_shifter_opcode == SLL) ? {32'h0, i_
                                 : (i_execute_shifter_opcode == SRL) ? {32'h0, i_operand_one}
                                 : {{32{1'b1}}, i_operand_one};
 
-assign multiplier_shift_index = (multiplier_state_counter == 0) ? {{30{1'b0}}, i_operand_two[0]};
-                              : (multiplier_state_counter == 1) ? {i_operand_two[1], 2'h0}
-                              : (multiplier_state_counter == 2) ? {i_operand_two[2], 4'h0}
-                              : (multiplier_state_counter == 3) ? {i_operand_two[3], 8'h0}
-                              : {i_operand_two[4], 16'h0};
+assign multiplier_shift_index = (multiplier_state_counter == 0) ? {{30{1'b0}}, multiplier_shift[0]};
+                              : (multiplier_state_counter == 1) ? {multiplier_shift[1], 2'h0}
+                              : (multiplier_state_counter == 2) ? {multiplier_shift[2], 4'h0}
+                              : (multiplier_state_counter == 3) ? {multiplier_shift[3], 8'h0}
+                              : {multiplier_shift[4], 16'h0};
 
 enum {ShifterRst, ShifterQuartOne, ShifterQuartTwo, ShifterQuartThree, ShifterQuartFour, ShifterValid} shifter_state_e;
 
@@ -45,9 +45,9 @@ always_ff @(posedge i_clk) begin : multipler_shifter_interface
         multiplier_temp_register <= 0;
         multiplier_accumulator <= multiplier_sign_extended;
 
-        multiplier_shift <= (i_execute_shifter_opcode == SLL) ? i_operand_one[4:0];
-                          : (i_execute_shifter_opcode == SRL) ? i_operand_one[4:0];
-                          : ~i_operand_one[4:0] + 1;
+        multiplier_shift <= (i_execute_shifter_opcode == SLL) ? i_execute_operand_two[4:0];
+                          : (i_execute_shifter_opcode == SRL) ? i_execute_operand_two[4:0];
+                          : ~i_execute_operand_two[4:0] + 1;
 
         shifter_state_e <= ShifterQuartOne;
         multiplier_state_counter <= 0;
