@@ -16,10 +16,7 @@ module rv32I_multipler_shift_controlpath (
 
 
 logic [3:0] multiplier_state_counter;
-logic [63:0] multiplier_accumulator;
-logic [63:0] multiplier_temp_register;
 logic [4:0] multiplier_shift;
-
 logic [63:0] multiplier_sign_extended;
 logic [16:0] multiplier_shift_index;
 
@@ -33,7 +30,11 @@ assign multiplier_shift_index = (multiplier_state_counter == 0) ? {{30{1'b0}}, m
                               : (multiplier_state_counter == 3) ? {multiplier_shift[3], 8'h0}
                               : {multiplier_shift[4], 16'h0};
 
-enum {ShifterRst, ShifterQuartOne, ShifterQuartTwo, ShifterQuartThree, ShifterQuartFour, ShifterValid} shifter_state_e;
+                            
+enum {ShifterRst, ShifterStage, ShifterResultValid} shifter_state_e;
+logic [1:0] multiplier_phase_counter;
+logic [63:0] multiplier_accumulator;
+logic [63:0] multiplier_temp_register;
 
 always_ff @(posedge i_clk) begin : multipler_shifter_interface
   o_execute_data_valid <= 1'b0;
@@ -51,59 +52,34 @@ always_ff @(posedge i_clk) begin : multipler_shifter_interface
 
         shifter_state_e <= ShifterQuartOne;
         multiplier_state_counter <= 0;
+        multiplier_phase_counter <= 0;
         o_multiplier_en <= 1'b0;
       end
 
-      ShifterQuartOne: begin : shifter_quart_one
+      ShifterStage: begin : shifter_stage
         o_multiplier_en <= 1'b1;
-        o_multiplier_operand_one <= multiplier_accumulator[15:0]
+        o_multiplier_operand_one <= (multiplier_phase_counter == 0) ? multiplier_accumulator[15:0]
+                                    : (multiplier_phase_counter == 1) ? multiplier_accumulator[31:16]
+                                    : (multiplier_phase_counter == 2) ? multiplier_accumulator[47:32]
+                                    :  multiplier_accumulator[63:48];
+
         o_multiplier_operand_two <= multiplier_shift_index;
 
         if (i_multiplier_valid) begin
-          multiplier_temp_register <= {32'd0, i_multiplier_result};
-          shifter_state_e <= ShifterQuartTwo;
+          multiplier_temp_register <= (multiplier_phase_counter == 0) ? {32'd0, i_multiplier_result}
+                                    : (multiplier_phase_counter == 1) ? multiplier_temp_register | {16'd0, i_multiplier_result, 16'd0}
+                                    : (multiplier_phase_counter == 2) ? multiplier_temp_register | {i_multiplier_result, 32'd0}
+                                    :  {i_multiplier_result[15:0], 48'd0};
+
+          shifter_state_e <= (multiplier_phase_counter == 3) ? ShifterValid : ShifterStage;
           o_multiplier_en <= 1'b0;
+          multiplier_phase_counter <= multiplier_phase_counter + 1'b1;
         end
       end
-
-      ShifterQuartTwo: begin : shifter_quart_two
-        o_multiplier_en <= 1'b1;
-        o_multiplier_operand_one <= multiplier_accumulator[31:16]
-        o_multiplier_operand_two <= multiplier_shift_index;
-
-        if (i_multiplier_valid) begin
-          multiplier_temp_register <= multiplier_temp_register | {16'd0, i_multiplier_result, 16'd0};
-          shifter_state_e <= ShifterQuartThree;
-          o_multiplier_en <= 1'b0;
-        end
-      end
-
-      ShifterQuartThree: begin : shifter_quart_three
-        o_multiplier_en <= 1'b1;
-        o_multiplier_operand_one <= multiplier_accumulator[47:32]
-        o_multiplier_operand_two <= multiplier_shift_index;
-
-        if (i_multiplier_valid) begin
-          multiplier_temp_register <= multiplier_temp_register | {i_multiplier_result, 32'd0};
-          shifter_state_e <= ShifterQuartFour;
-          o_multiplier_en <= 1'b0;
-        end
-      end
-
-      ShifterQuartFour: begin : shifter_quart_four
-        o_multiplier_en <= 1'b1;
-        o_multiplier_operand_one <= multiplier_accumulator[47:32]
-        o_multiplier_operand_two <= multiplier_shift_index;
-
-        if (i_multiplier_valid) begin
-          multiplier_temp_register <= multiplier_temp_register | {i_multiplier_result[15:0], 48'd0};
-          shifter_state_e <= ShifterValid;
-          o_multiplier_en <= 1'b0;
-        end
-      end : shifter_quart_four
 
       ShifterValid: begin : shifter_valid
-        shifter_state_e <= ShifterQuartOne;
+        shifter_state_e <= ShifterStage;
+        multiplier_phase_counter <= 0;
         multiplier_accumulator <= multiplier_temp_register;
         multiplier_state_counter <= multiplier_state_counter + 1;
         o_multiplier_en <= 1'b0;
@@ -111,7 +87,7 @@ always_ff @(posedge i_clk) begin : multipler_shifter_interface
         if (multiplier_state_counter == 4) begin 
           o_execute_data_valid <= 1'b1;
           o_execute_data_result <= (i_execute_shifter_opcode == SLL) ? multiplier_temp_register[31:0]
-                                  : multiplier_accumulator[63:32];
+                                  : multiplier_temp_register[63:32];
 
           shifter_state_e <= ShifterRst;
         end
