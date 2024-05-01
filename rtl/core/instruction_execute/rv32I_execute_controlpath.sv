@@ -1,3 +1,5 @@
+import RV32I_core_utils_package::*;
+
 module rv32I_execute_controlpath (
   input logic i_clk,
   input logic i_rst,
@@ -46,7 +48,7 @@ always_comb begin
   o_alu_result = {i_datapath_result, datapath_result_register};
 
   if (i_alu_sel == LUI) begin : alu_state_counter_lui
-    o_alu_result = {i_operand_two[19:0], {12{1'b0}}}
+    o_alu_result = {i_alu_operand_two[19:0], {12{1'b0}}};
     o_alu_data_valid = 1'b1;
   end : alu_state_counter_lui
 
@@ -75,7 +77,7 @@ always_comb begin
       o_datapath_operand_one = i_alu_operand_one[15:0];
       o_datapath_operand_two = i_alu_operand_two[15:0];
     end else begin
-      o_datapath_carry_in = datapath_carry_out_register
+      o_datapath_carry_in = datapath_carry_out_register;
       o_datapath_operand_one = i_alu_operand_one[31:16];
       o_datapath_operand_two = i_alu_operand_two[31:16];
       o_alu_data_valid = 1'b1;

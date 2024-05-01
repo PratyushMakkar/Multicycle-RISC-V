@@ -1,3 +1,5 @@
+import RV32I_core_utils_package::*;
+
 module rv32I_multipler_shift_controlpath (
   input logic i_clk,
   input logic i_rst,
@@ -23,8 +25,8 @@ logic [4:0] multiplier_shift;
 logic [63:0] multiplier_sign_extended;
 logic [16:0] multiplier_shift_index;
 
-assign multiplier_sign_extended = (i_execute_shifter_opcode == 4'b0001) ? {32'h0, i_execute_operand_one}
-                                : (i_execute_shifter_opcode == 4'b0101) ? {32'h0, i_execute_operand_one}
+assign multiplier_sign_extended = (i_execute_shifter_opcode == SLL) ? {32'h0, i_execute_operand_one}
+                                : (i_execute_shifter_opcode == SRL) ? {32'h0, i_execute_operand_one}
                                 : {{32{i_execute_operand_one[31]}}, i_execute_operand_one};
 
 assign multiplier_shift_index = (multiplier_state_counter == 0) ? {multiplier_shift[0], ~multiplier_shift[0]}
@@ -51,7 +53,7 @@ always_ff @(posedge i_clk) begin
         multiplier_temp_register <= 0;
         multiplier_accumulator <= multiplier_sign_extended;
 
-        multiplier_shift <= (i_execute_shifter_opcode == 4'b0001) ? i_execute_operand_two[4:0]
+        multiplier_shift <= (i_execute_shifter_opcode == SLL) ? i_execute_operand_two[4:0]
                           : ~i_execute_operand_two[4:0] + 1;
 
         shifter_state_e <= ShifterStage;
@@ -90,7 +92,7 @@ always_ff @(posedge i_clk) begin
 
         if (multiplier_state_counter == 5) begin 
           o_execute_data_valid <= 1'b1;
-          o_execute_data_result <= (i_execute_shifter_opcode == 4'b0001) ? multiplier_temp_register[31:0]
+          o_execute_data_result <= (i_execute_shifter_opcode == SLL) ? multiplier_temp_register[31:0]
                                   : multiplier_temp_register[63:32];
 
           shifter_state_e <= ShifterRst;
