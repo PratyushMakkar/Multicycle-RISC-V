@@ -25,16 +25,17 @@ logic [16:0] multiplier_shift_index;
 
 assign multiplier_sign_extended = (i_execute_shifter_opcode == 4'b0001) ? {32'h0, i_execute_operand_one}
                                 : (i_execute_shifter_opcode == 4'b0101) ? {32'h0, i_execute_operand_one}
-                                : {{32{1'b1}}, i_execute_operand_one};
+                                : {{32{i_execute_operand_one[31]}}, i_execute_operand_one};
 
 assign multiplier_shift_index = (multiplier_state_counter == 0) ? {multiplier_shift[0], ~multiplier_shift[0]}
                               : (multiplier_state_counter == 1) ? {multiplier_shift[1], 1'h0, ~multiplier_shift[1]}
                               : (multiplier_state_counter == 2) ? {multiplier_shift[2], 3'h0, ~multiplier_shift[2]}
                               : (multiplier_state_counter == 3) ? {multiplier_shift[3], 7'h0, ~multiplier_shift[3]}
-                              : {multiplier_shift[4], 15'h0, ~multiplier_shift[4]};
+                              : {multiplier_shift[4], 7'h0, ~multiplier_shift[4]};
 
                             
 enum {ShifterRst, ShifterStage, ShifterValid} shifter_state_e;
+
 logic [1:0] multiplier_phase_counter;
 logic [63:0] multiplier_accumulator;
 logic [63:0] multiplier_temp_register;
@@ -51,7 +52,6 @@ always_ff @(posedge i_clk) begin
         multiplier_accumulator <= multiplier_sign_extended;
 
         multiplier_shift <= (i_execute_shifter_opcode == 4'b0001) ? i_execute_operand_two[4:0]
-                          : (i_execute_shifter_opcode == 4'b0101) ? i_execute_operand_two[4:0]
                           : ~i_execute_operand_two[4:0] + 1;
 
         shifter_state_e <= ShifterStage;
@@ -88,7 +88,7 @@ always_ff @(posedge i_clk) begin
         multiplier_state_counter <= multiplier_state_counter + 1;
         o_multiplier_en <= 1'b0;
 
-        if (multiplier_state_counter == 4) begin 
+        if (multiplier_state_counter == 5) begin 
           o_execute_data_valid <= 1'b1;
           o_execute_data_result <= (i_execute_shifter_opcode == 4'b0001) ? multiplier_temp_register[31:0]
                                   : multiplier_temp_register[63:32];
@@ -102,6 +102,7 @@ always_ff @(posedge i_clk) begin
 
   if (i_rst) begin
     shifter_state_e <= ShifterRst;
+    o_multiplier_en <= 1'b0;
   end
 end
 
