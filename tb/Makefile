@@ -13,6 +13,9 @@ INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32I_execut
 INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32I_multipler_shift_controlpath.sv
 
 INSTRUCTION_DECODE_RTL_SRCS :=
+INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_decode_stage.sv
+INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_decode.sv
+INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_register_file.sv
 
 INSTRUCTION_FETCH_RTL_SRCS :=
 

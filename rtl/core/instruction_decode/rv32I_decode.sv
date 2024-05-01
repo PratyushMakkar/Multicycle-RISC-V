@@ -97,7 +97,7 @@ wire [4:0] alu_src_a_reg    = i_fetch_instruction[19:15];
 wire [4:0] alu_src_b_reg    = i_fetch_instruction[24:20];
 wire [4:0] alu_dest_reg     = i_fetch_instruction[11:7];
 
-always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
+always_comb begin 
   o_alu_op = ALU_NOOP;
   o_alu_src_immediate = 32'd0;
   o_alu_src_a_reg = 0;
@@ -236,7 +236,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_b_reg = alu_src_b_reg;
     o_alu_dest_reg = alu_dest_reg;
     o_writeback_op = WB_EN;
-    o_alu_op = AND:
+    o_alu_op = AND;
   end
 
   if (o_r_srl_instr) begin
@@ -268,7 +268,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_b_reg = alu_src_b_reg;
     o_alu_dest_reg = alu_dest_reg;
     o_writeback_op = WB_EN;
-    o_alu_op = SLT:
+    o_alu_op = SLT;
   end
 
   if (o_r_sltu_instr) begin
@@ -327,7 +327,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
     o_alu_op = ADD_MEM;
     o_writeback_op = WB_EN;
-    o_memory_op = LOAD:
+    o_memory_op = LOAD;
     o_memory_sign_extend = 1'b1;
     o_memory_operand_size = BYTE;
   end
@@ -338,7 +338,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
     o_alu_op = ADD_MEM;
     o_writeback_op = WB_EN;
-    o_memory_op = LOAD:
+    o_memory_op = LOAD;
     o_memory_sign_extend = 1'b1;
     o_memory_operand_size = HALF_WORD;
   end
@@ -349,7 +349,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
     o_alu_op = ADD_MEM;
     o_writeback_op = WB_EN;
-    o_memory_op = LOAD:
+    o_memory_op = LOAD;
     o_memory_sign_extend = 1'b1;
     o_memory_operand_size = WORD;
   end
@@ -360,7 +360,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
     o_alu_op = ADD_MEM;
     o_writeback_op = WB_EN;
-    o_memory_op = LOAD:
+    o_memory_op = LOAD;
     o_memory_operand_size = BYTE;
   end
 
@@ -370,14 +370,14 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, lower_immediate};
     o_alu_op = ADD_MEM;
     o_writeback_op = WB_EN;
-    o_memory_op = LOAD:
+    o_memory_op = LOAD;
     o_memory_operand_size = HALF_WORD;
   end
 
   if (o_st_sb_instr) begin
     o_alu_src_b_reg = alu_src_b_reg;
     o_alu_src_a_reg = alu_src_a_reg;
-    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]}};
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]};
     o_alu_op = ADD_MEM;
     o_memory_op = STORE;
   end
@@ -385,7 +385,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
   if (o_st_sh_instr) begin
     o_alu_src_b_reg = alu_src_b_reg;
     o_alu_src_a_reg = alu_src_a_reg;
-    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]}};
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]};
     o_alu_op = ADD_MEM;
     o_memory_op = STORE;
   end
@@ -393,10 +393,11 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
   if (o_st_sw_instr) begin
     o_alu_src_b_reg = alu_src_b_reg;
     o_alu_src_a_reg = alu_src_a_reg;
-    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]}};
+    o_alu_src_immediate = {{20{i_fetch_instruction[31]}}, i_fetch_instruction[31:25], i_fetch_instruction[11:7]};
     o_alu_op = ADD_MEM;
     o_memory_op = STORE;
   end
+end
 
 assign o_invalid_instruction = 1'b0;
 endmodule

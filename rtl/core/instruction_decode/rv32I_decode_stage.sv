@@ -95,9 +95,9 @@ assign o_decode_ready_recv = (decode_state_e == DecodeRst && !i_fetch_valid_recv
 assign o_branch_taken = i_branch_taken;
 assign o_branch_pc_operand = i_fetch_instruction_pc;
 
-always_ff @(posedge i_clk) begin : decode_state_fsm
+always_ff @(posedge i_clk) begin 
 
-  unique case (current_state) begin
+  unique case (current_state)
     DecodeRst: begin
       o_register_read_en <= 1'b0;
       o_branch_adder_en <= 1'b0;
@@ -117,10 +117,10 @@ always_ff @(posedge i_clk) begin : decode_state_fsm
       end
     end
 
-    DecodeRegisterReadA: begin : read_register_a
+    DecodeRegisterReadA: begin 
       o_register_read_en <= 1'b1;
 
-      if (i_register_read_valid) begin : register_read_valid
+      if (i_register_read_valid) begin 
         o_alu_src_a_reg <= i_register_read_data;
 
         if (!r_type_instruction && !b_type_instruction && !i_ex_stall_send) begin
@@ -140,10 +140,10 @@ always_ff @(posedge i_clk) begin : decode_state_fsm
           o_branch_adder_en <= 1'b1;
         end
 
-      end : register_read_valid
-    end : read_register_a
+      end 
+    end 
 
-    DecodeRegisterReadB: begin : decode_read_b
+    DecodeRegisterReadB: begin 
       o_register_read_en <= 1'b1;
 
       if (i_register_read_valid && !i_ex_stall_send) begin
@@ -151,20 +151,20 @@ always_ff @(posedge i_clk) begin : decode_state_fsm
         decode_state_e <= DecodeRst;
         o_ex_decode_ready <= 1'b1;
       end
-    end : decode_read_b
+    end 
 
-    DecodeBranchResult: begin : decode_branch_result
+    DecodeBranchResult: begin 
       if (i_branch_result_valid && !i_ex_stall_send) begin
         o_ex_decode_ready <= 1'b1;
         o_branch_adder_en <= 1'b0;
         decode_state_e <= DecodeRst;
       end
-    end : decode_branch_result
-  end
+    end 
+  endcase
 
   if (i_rst) begin
     decode_state_e <= DecodeRst;
   end
-end : decode_state_fsm
+end 
 
 endmodule
