@@ -9,23 +9,22 @@ MODULE ?= main
 
 INSTRUCTION_EXECUTE_RTL_SRCS := 
 INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32_adder_unit.sv
-INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32I_alu_execute_fsm.sv
+INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32I_execute_controlpath.sv
+INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32I_multipler_shift_controlpath.sv
 
 INSTRUCTION_DECODE_RTL_SRCS :=
-INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_register_file.sv
 INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_decode_stage.sv
+INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_decode.sv
+INSTRUCTION_DECODE_RTL_SRCS += $(RTL_DIR)/core/instruction_decode/rv32I_register_file.sv
 
 INSTRUCTION_FETCH_RTL_SRCS :=
-INSTRUCTION_FETCH_RTL_SRCS +=  $(RTL_DIR)/core/instruction_fetch/rv32I_instruction_fetch_stage.sv
-INSTRUCTION_FETCH_RTL_SRCS +=  $(RTL_DIR)/core/instruction_fetch/rv32I_instruction_mem.sv
 
-SV_TB_DIR := $(RTL_DIR)/tb_wrappers/rv32_tb_package.sv
+SV_TB_DIR := $(RTL_DIR)/tb_wrappers/tb_multiplier_shift_controlpath.sv
 
 VERILOG_SOURCES :=
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_package.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_utils.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_sim_build_params.sv
-VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_writeback_stage.sv
 VERILOG_SOURCES += $(RTL_DIR)/riscv_core.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32_bram_wrapper.sv
 VERILOG_SOURCES += $(INSTRUCTION_DECODE_RTL_SRCS)

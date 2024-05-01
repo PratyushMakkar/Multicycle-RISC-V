@@ -69,7 +69,7 @@ always_comb begin : NEXT_STATE_LOGIC_BLOCK
     next_state = FETCH;
   end
 
-  else begin : NORMAL_FSM_SEQUENCE
+  else begin 
     case (current_state)
       FETCH: begin
         if (i_instruction_wr_en) next_state = LOAD;
@@ -105,6 +105,11 @@ always_ff @(posedge i_clk) begin : SEQUENTIAL_LOGIC_BLOCK
   if (instruction_latch_en) instruction_reg <= next_instruction;
 end
 
+assign instruction_mem_rst = i_rst;
+assign instruction_mem_rd_addr = pc_addr_reg;
+assign instruction_mem_wr_addr = i_instruction_wr_addr;
+assign instruction_mem_wr_data = i_instruction_wr_data;
+
 always_comb begin : COMBO_OUTPUT_BLOCK
   instruction_mem_wr_en = 1'b0;
   instruction_mem_rd_en = 1'b0;
@@ -128,10 +133,7 @@ always_comb begin : COMBO_OUTPUT_BLOCK
   endcase
 end
 
-assign instruction_mem_rst = i_rst;
-assign instruction_mem_rd_addr = pc_addr_reg;
-assign instruction_mem_wr_addr = i_instruction_wr_addr;
-assign instruction_mem_wr_data = i_instruction_wr_data;
+
 assign o_instruction_wr_valid = instruction_mem_wr_valid;
 assign o_fetch_instruction_pc = pc_addr_reg;
 endmodule
