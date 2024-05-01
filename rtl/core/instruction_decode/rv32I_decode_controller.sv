@@ -1,6 +1,4 @@
-module rv32I_decode_controller #(parameter INSTRUCTION_WIDTH = 32, parameter WORD_SIZE = 32) (
-  input logic i_clk,
-  input logic i_rst,
+module rv32I_decode #(parameter INSTRUCTION_WIDTH = 32, parameter WORD_SIZE = 32) (
 
   input logic [INSTRUCTION_WIDTH-1:0] i_fetch_instruction,
   output logic o_invalid_instruction,
@@ -98,8 +96,6 @@ wire [19:0] upper_immediate = i_fetch_instruction[31:12];
 wire [4:0] alu_src_a_reg    = i_fetch_instruction[19:15];
 wire [4:0] alu_src_b_reg    = i_fetch_instruction[24:20];
 wire [4:0] alu_dest_reg     = i_fetch_instruction[11:7];
-
-wire sign_extend_lower_imm = (o_i_addi_instr | o_i_slti_instr | o_i_sltiu_instr | o_i_ori_instr | o_i_xori_instr | o_i_andi_instr);
 
 always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
   o_alu_op = ALU_NOOP;
@@ -401,7 +397,7 @@ always_comb begin : ALU_EXECUTE_STAGE_SIGNALS
     o_alu_op = ADD_MEM;
     o_memory_op = STORE;
   end
+
+assign o_invalid_instruction = 1'b0;
 endmodule
 
-
-// TODO:  Branch OP

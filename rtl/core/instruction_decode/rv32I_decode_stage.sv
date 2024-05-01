@@ -19,15 +19,16 @@ module RV32I_decode_stage #(parameter WORD_SIZE = 32, parameter INSTRUCTION_WIDT
 
 // ------------- Branch-Adder Interface ----------------- //
   input logic i_branch_result_valid,
+  output logic o_branch_adder_en,
   output logic o_branch_taken,
   output logic [WORD_SIZE-1:0] o_branch_pc_operand,
   output logic [WORD_SIZE-1:0] o_branch_immediate,
   output logic [WORD_SIZE-1:0] o_branch_register_data,
   
-
 //---------  Execute Stage Pipeline Signals ----------- //
   input logic i_ex_stall_send, // When the skid buffer is full
   output logic o_ex_decode_ready,
+  output logic [4:0] o_alu_instruction_type,
   output logic [3:0] o_alu_op,
   output logic [WORD_SIZE-1:0] o_alu_src_one,
   output logic [WORD_SIZE-1:0] o_alu_src_two,
@@ -41,82 +42,129 @@ module RV32I_decode_stage #(parameter WORD_SIZE = 32, parameter INSTRUCTION_WIDT
   output logic [4:0] o_register_writeback_addr
 );
 
-typedef enum {DecodeRst, DecodeRegisterReadA, DecodeRegisterReadB} decode_state_t;
-decode_state_t current_state, next_state;
-
-always_ff @(posedge i_clk) begin
-  current_state <= next_state;
-
-  if (i_rst) begin
-    current_state <= DecodeRst;
-  end
-end
-
-
-logic [4:0] register_addr_a, register_addr_b;
+logic invalid_instruction;
+logic i_type_instruction;
 logic r_type_instruction;
+logic b_type_instruction;
+logic ld_type_instruction;
+logic str_type_instruction;
 
+logic pc_operand;
+logic [3:0] alu_op;
+logic [WORD_SIZE-1:0] alu_src_immediate;
+logic [4:0] alu_src_a_reg;
+logic [4:0] alu_src_b_reg;
+logic [4:0] alu_dest_reg;
+logic [2:0] branch_op;
 
-logic alu_src_latch_en_a, alu_src_latch_en_b;
-logic alu_src_b_value;
+logic memory_sign_extend;
+logic [1:0] memory_op;
+logic [1:0] memory_operand_size;
 
-always_comb begin
-o_register_rst = 1'b0;
-o_register_read_en = 1'b0;
-o_register_addr = 'd0;
+logic writeback_op;
 
-alu_src_b_value = i_register_read_data;
-next_state = current_state;
+rv32I_decode RV32_DECODE_INSTANCE (
+  .i_fetch_instruction(i_fetch_instruction),
+  .o_invalid_instruction(invalid_instruction),
 
-unique case (current_state) begin
-  DecodeRst: begin
-    o_register_read_en = 1'b1;
-    o_ex_decode_ready = 1'b1;
-    o_fetch_ready_recv = ~i_fetch_valid_recv;
+  .o_i_type_opcode_instr(i_type_instruction),
+  .o_r_type_opcode_instr(r_type_instruction),
+  .o_b_type_opcode_instr(b_type_instruction),
+  .o_ld_type_opcode_instr(ld_type_instruction),
+  .o_str_type_opcode_instr(str_type_instruction),
 
-    if (i_fetch_valid_recv) begin
-      o_register_addr = register_addr_a;
-      next_state = DecodeRegisterReadA;
-    end
-  end
+  .o_pc_operand(pc_operand),
+  .o_alu_op(alu_op),
+  .o_alu_src_immediate(alu_src_immediate),
+  .o_alu_src_a_reg(alu_src_a_reg),
+  .o_alu_src_b_reg(alu_src_b_reg),
+  .o_alu_dest_reg(alu_dest_reg),
 
-  DecodeRegisterReadA: begin
-    o_register_read_en = 1'b1;
-    if (i_register_read_valid) begin
-      o_register_addr = register_addr_a;
+  .o_branch_op(branch_op),
+  
+  .o_memory_sign_extend(memory_sign_extend),
+  .o_memory_op(memory_op),
+  .o_memory_operand_size(memory_operand_size),
 
-      if (r_type_instruction) begin
-        alu_src_latch_en_a = 1'b1;
-        next_state = DecodeRegisterReadB;
-      end else begin
-        alu_src_latch_en_a = 1'b1;
-        next_state = DecodeRst;
-        o_ex_decode_ready = 1'b1;
+  .o_writeback_op(writeback_op)
+);
+
+enum {DecodeRst, DecodeRegisterReadA, DecodeRegisterReadB, DecodeBranchResult} decode_state_e;
+
+assign o_decode_ready_recv = (decode_state_e == DecodeRst && !i_fetch_valid_recv) ? 1'b1 : 1'b0;
+assign o_branch_taken = i_branch_taken;
+assign o_branch_pc_operand = i_fetch_instruction_pc;
+
+always_ff @(posedge i_clk) begin : decode_state_fsm
+
+  unique case (current_state) begin
+    DecodeRst: begin
+      o_register_read_en <= 1'b0;
+      o_branch_adder_en <= 1'b0;
+
+      if (i_fetch_valid_recv) begin
+        o_register_read_en <= 1'b1;
+        o_register_addr <= register_addr_a;
+        decode_state_e <= DecodeRegisterReadA;
+        
+        o_alu_instruction_type <= {i_type_instruction, r_type_instruction, b_type_instruction, ld_type_instruction, str_type_instruction};
+        o_alu_op <= alu_op;
+        o_memory_op <= memory_op;
+        o_memory_operand_size <= memory_operand_size;
+        o_writeback_op <= writeback_op;
+        o_register_writeback_addr <= alu_dest_reg;
+        o_alu_src_two <= alu_src_immediate;
       end
     end
+
+    DecodeRegisterReadA: begin : read_register_a
+      o_register_read_en <= 1'b1;
+
+      if (i_register_read_valid) begin : register_read_valid
+        o_alu_src_a_reg <= i_register_read_data;
+
+        if (!r_type_instruction && !b_type_instruction && !i_ex_stall_send) begin
+          decode_state_e <= DecodeRst;
+          o_register_read_en <= 1'b0;
+          o_ex_decode_ready <= 1'b1;
+        end
+
+        if (r_type_instruction) begin
+          decode_state_e <= DecodeRegisterReadB;
+          o_register_addr <= register_addr_b;
+        end 
+        
+        if (b_type_instruction) begin
+          decode_state_e <= DecodeBranchResult;
+          o_register_read_en <= 1'b0;
+          o_branch_adder_en <= 1'b1;
+        end
+
+      end : register_read_valid
+    end : read_register_a
+
+    DecodeRegisterReadB: begin : decode_read_b
+      o_register_read_en <= 1'b1;
+
+      if (i_register_read_valid && !i_ex_stall_send) begin
+        o_alu_src_b_reg <= i_register_read_data;
+        decode_state_e <= DecodeRst;
+        o_ex_decode_ready <= 1'b1;
+      end
+    end : decode_read_b
+
+    DecodeBranchResult: begin : decode_branch_result
+      if (i_branch_result_valid && !i_ex_stall_send) begin
+        o_ex_decode_ready <= 1'b1;
+        o_branch_adder_en <= 1'b0;
+        decode_state_e <= DecodeRst;
+      end
+    end : decode_branch_result
   end
 
-  DecodeRegisterReadB: begin
-    o_register_read_en = 1'b1;
-    if (i_register_read_valid && !i_ex_stall_send) begin
-      alu_src_latch_en_b = 1'b1;
-      o_register_addr = register_addr_b;
-      next_state = DecodeRst;
-      o_ex_decode_ready = 1'b1;
-    end
+  if (i_rst) begin
+    decode_state_e <= DecodeRst;
   end
-end
-
-end
-
-always_ff @(posedge i_clk) begin : LatchingOutputs
-  if (alu_src_latch_en_a) begin 
-    o_alu_src_one <= i_register_read_data;
-  end
-
-  if (alu_src_latch_en_b) begin 
-    o_alu_src_two <= alu_src_b_value;
-  end
-end
+end : decode_state_fsm
 
 endmodule
