@@ -7,6 +7,7 @@ RTL_DIR =  $(shell pwd)/../rtl
 TB_DIR = $(shell pwd)/../tb
 MODULE ?= main
 
+
 INSTRUCTION_EXECUTE_RTL_SRCS := 
 INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32_adder_unit.sv
 INSTRUCTION_EXECUTE_RTL_SRCS += $(RTL_DIR)/core/instruction_execute/rv32I_execute_controlpath.sv
@@ -22,7 +23,6 @@ INSTRUCTION_FETCH_RTL_SRCS :=
 SV_TB_DIR := $(RTL_DIR)/tb_wrappers/tb_multiplier_shift_controlpath.sv
 
 VERILOG_SOURCES :=
-VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_package.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_core_utils.sv
 VERILOG_SOURCES += $(RTL_DIR)/core/rv32I_sim_build_params.sv
 VERILOG_SOURCES += $(RTL_DIR)/riscv_core.sv
